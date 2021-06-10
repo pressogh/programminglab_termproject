@@ -1,0 +1,19 @@
+#pragma once
+
+#define STAGE_COUNT 3
+#define STAGE_WIDTH 8
+#define STAGE_HEIGHT 11
+#define WALL_SIZE 32
+#define BALL_COUNT 7
+#define BALL_SIZE 32
+
+#define LAUNCHER_WIDTH 32
+#define LAUNCHER_HEIGHT 44
+
+enum
+{
+	BALL_STATE_EMPTY = 0,
+	BALL_STATE_READY,
+	BALL_STATE_ING,
+	BALL_STATE_END
+};

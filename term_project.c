@@ -308,7 +308,7 @@ void inGame(int map_number)
 		else if (ch == 75) x--;
 		else if (ch == 77) x++;
 
-		Ellipse(hdc, x, y, x+50, y+50);
+		Ellipse(hdc, x, y, x+ball_radius, y+ball_radius);
 		
 		endBuffer();
 	}

@@ -11,23 +11,6 @@
 
 #pragma comment(lib, "winmm.lib")
 
-#define BLACK	0
-#define BLUE1	1
-#define GREEN1	2
-#define CYAN1	3
-#define RED1	4
-#define MAGENTA1 5
-#define YELLOW1	6
-#define GRAY1	7
-#define GRAY2	8
-#define BLUE2	9
-#define GREEN2	10
-#define CYAN2	11
-#define RED2	12
-#define MAGENTA2 13
-#define YELLOW2	14
-#define WHITE	15
-
 void gotoxy(int x, int y) //내가 원하는 위치로 커서 이동
 {
 	COORD pos; // Windows.h 에 정의
@@ -144,12 +127,12 @@ int stage_saved[STAGE_COUNT][STAGE_WIDTH * STAGE_HEIGHT] =
 	},
 	{
 		1, 1, 2, 2, 3, 3, 4, 4,
-		0, 0, 0, 0, 0, 0, 5, 0,
-		2, 1, 1, 7, 7, 6, 6, 5,
-		2, 0, 0, 0, 0, 0, 0, 0,
-		3, 3, 4, 4, 5, 5, 6, 6,
-		0, 0, 0, 0, 0, 0, 7, 0,
-		0, 3, 3, 2, 2, 1, 1, 7,
+		1, 1, 2, 2, 3, 3, 4, 0,
+		3, 3, 4, 4, 1, 1, 2, 2,
+		3, 3, 4, 4, 1, 1, 2, 0,
+		1, 1, 6, 6, 5, 5, 4, 4,
+		1, 1, 6, 6, 5, 5, 4, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
@@ -157,52 +140,21 @@ int stage_saved[STAGE_COUNT][STAGE_WIDTH * STAGE_HEIGHT] =
 	}
 };
 
-// 현재 맵
-int stage_now[STAGE_WIDTH * STAGE_HEIGHT] = { 0 };
-// 현재 맵 번호
-int stage_now_num = 0;
-// 공 줄간격
-float ballspace = 0.87f;
-// 맵 체크
-bool stage_check[STAGE_HEIGHT * STAGE_WIDTH] = { false };
-int stage_ycheck[STAGE_HEIGHT * STAGE_WIDTH] = { 0 };
-
-//
-// 공 관련
-//
-
-// 발사 가능 여부
-bool can_launch = false;
-// 발사될 공 상태
-int ball_state = 0;
-// 발사되는 공 색, 다음 공 색
-int ball_now = 0, ball_next = 0;
-// 날아가는 공 좌표
-float flying_ball_x = 0.0f, flying_ball_y = 0.0f;
-// 날아가는 공 속력
-float flying_ball_speed = 0.0f;
-// 날아가는 공의 x, y 이동 수치
-float flying_ball_move_x = 0.0f, flying_ball_move_y = 0.0f;
-int ball_radius = 30;
-
-//
-// 발사대 관련
-//
-
-// 발사대 각도
-float launcher_angle = 90.0f;
-// 발사대 각도 최소, 최대
-float launcher_angle_min = 15.0f, launcher_angle_max = 175.0f;
-// 발사대 위치
-float launcher_x = 0.0f, launcher_y = 0.0f;
-// 발사대 오프셋 좌표
-float launcher_offset_x = 16.0f, launcher_offset_y = 16.0f;
-
-//
-// 게임 상황
-//
-
-bool game_active = false;
+int stage;
+bool game_active = true;
+int stage_now[STAGE_WIDTH][STAGE_HEIGHT] = {
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0
+};
 
 void init()
 {
@@ -255,13 +207,13 @@ static HDC hdc, MemDC, tmpDC;
 static PAINTSTRUCT ps;
 static HBITMAP BackBit, oldBackBit;
 static RECT bufferRT;
-static HWND hWnd;
+static HWND hwnd;
 
 void startBuffer()
 {
-	hWnd = GetForegroundWindow();
-	hdc = GetDC(hWnd);
-	GetClientRect(hWnd, &bufferRT);
+	hwnd = GetForegroundWindow();
+	hdc = GetDC(hwnd);
+	GetClientRect(hwnd, &bufferRT);
 	MemDC = CreateCompatibleDC(hdc);
 	BackBit = CreateCompatibleBitmap(hdc, bufferRT.right, bufferRT.bottom);
 	oldBackBit = (HBITMAP)SelectObject(MemDC, BackBit);
@@ -276,13 +228,85 @@ void endBuffer()
 	tmpDC = hdc;
 	hdc = MemDC;
 	MemDC = tmpDC;
-	GetClientRect(hWnd, &bufferRT);
+	GetClientRect(hwnd, &bufferRT);
 	BitBlt(hdc, 0, 0, bufferRT.right, bufferRT.bottom, MemDC, 0, 0, SRCCOPY);
 	SelectObject(MemDC, oldBackBit);
 	DeleteObject(BackBit);
 	DeleteDC(MemDC);
-	ReleaseDC(hWnd, hdc);
-	EndPaint(hWnd, &ps);
+	ReleaseDC(hwnd, hdc);
+	EndPaint(hwnd, &ps);
+}
+
+void drawWall()
+{
+	int r = 50;
+	int x = 350, y = 50;
+	int i;
+	for (i = 0; i < STAGE_HEIGHT; i++)
+	{
+		Rectangle(hdc, x, y + i * r, x + r, y + i * r + r);
+	}
+	
+	for (i = 0; i < STAGE_WIDTH; i++)
+	{
+		Rectangle(hdc, x + i * r, y, x + i * r + r, y + r);
+	}
+
+	x = x + (i - 1) * r;
+	
+	for (i = 0; i < STAGE_HEIGHT; i++)
+	{
+		Rectangle(hdc, x, y + i * r, x + r, y + i * r + r);
+	}
+}
+
+void drawOneBall(int color, int x, int y, int r)
+{	
+	HBRUSH hbrush = CreateSolidBrush(RGB(0, 0, 0));
+	HGDIOBJ h_old_brush = SelectObject(hdc, hbrush);
+	
+	Ellipse(hdc, x, y, x + r, y + r);
+	
+	SelectObject(hdc, h_old_brush);
+	DeleteObject(hbrush);
+}
+
+void drawMap()
+{
+	int idx = 0, r = 30;
+	float g_fBallSpace = 0.87f;
+
+	// 공이 그려질 위치
+	float fDrawX = 1.0f, fDrawY = 1.0f;
+
+	// 반복
+	for (int y = 0; y < STAGE_HEIGHT; y++)
+	{
+		// 겹치는 수치만큼 이동
+		fDrawY = WALL_SIZE + BALL_SIZE * g_fBallSpace * y;
+
+		for (int x = 0; x < STAGE_WIDTH; x++)
+		{
+			// 공이 없으면 continue
+			idx = stage_now[y][x];
+			if (idx == 0) continue;
+
+			// 0 : 홀수줄, 1 : 짝수줄
+			if (y % 2)
+			{
+				// 1 : 짝수줄
+				// 공의 반만큼 오른쪽으로
+				fDrawX = (float)(WALL_SIZE + BALL_SIZE / 2.0f + BALL_SIZE * x);
+			}
+			else
+			{
+				// 0 : 짝수줄
+				fDrawX = (float)(WALL_SIZE + x * BALL_SIZE);
+			}
+
+			drawOneBall(idx, fDrawX, fDrawY, r);
+		}
+	}
 }
 
 void inGame(int map_number)
@@ -291,27 +315,20 @@ void inGame(int map_number)
 	PlaySound(TEXT("Puzzle Bobble.wav"), NULL, SND_FILENAME|SND_ASYNC|SND_LOOP);
 	int x = 0, y = 0;
 
+	
 	int ch = 0;
-	while(!game_active)
+	
+	while(game_active)
 	{
 		startBuffer();
-		
-		if (_kbhit())
-		{
-			int temp = _getch();
-			if (temp == 32) break;
-			if (temp == 224) ch = _getch();
-		}
-		
-		if (ch == 72) y--;
-		else if (ch == 80) y++;
-		else if (ch == 75) x--;
-		else if (ch == 77) x++;
 
-		Ellipse(hdc, x, y, x+ball_radius, y+ball_radius);
+		if (_kbhit()) if (_getch() == 32) break;
+		drawWall();
+		drawMap();
 		
 		endBuffer();
 	}
+
 }
 
 int main()

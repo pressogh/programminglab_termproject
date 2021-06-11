@@ -97,7 +97,7 @@ void draw_box2(int x1, int y1, int x2, int y2, char* ch)
 //
 
 // 저장된 맵
-int stage_saved[STAGE_COUNT][STAGE_WIDTH * STAGE_HEIGHT] = 
+int stage_saved[STAGE_COUNT][STAGE_WIDTH][STAGE_HEIGHT] = 
 {
 	{
 		1, 1, 2, 2, 3, 3, 4, 4,
@@ -142,19 +142,19 @@ int stage_saved[STAGE_COUNT][STAGE_WIDTH * STAGE_HEIGHT] =
 
 int stage;
 bool game_active = true;
-int stage_now[STAGE_WIDTH][STAGE_HEIGHT] = {
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0
+int stage_now[STAGE_HEIGHT][STAGE_WIDTH] = {
+	{ 1, 1, 1, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 2, 2, 3, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 4, 2, 1, 0 },
+	{ 0, 0, 0, 0, 0, 1, 1, 1 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0 }
 };
+int ball_now = 1, ball_next = 2;
 
 void init()
 {
@@ -239,30 +239,35 @@ void endBuffer()
 
 void drawWall()
 {
-	int r = 50;
 	int x = 350, y = 50;
 	int i;
 	for (i = 0; i < STAGE_HEIGHT; i++)
 	{
-		Rectangle(hdc, x, y + i * r, x + r, y + i * r + r);
+		Rectangle(hdc, x, y + i * WALL_SIZE, x + WALL_SIZE, y + (i + 1) * WALL_SIZE);
 	}
 	
-	for (i = 0; i < STAGE_WIDTH; i++)
+	for (i = 0; i < 10; i++)
 	{
-		Rectangle(hdc, x + i * r, y, x + i * r + r, y + r);
+		Rectangle(hdc, x + i * WALL_SIZE, y, x + (i + 1) * WALL_SIZE, y + WALL_SIZE);
 	}
 
-	x = x + (i - 1) * r;
+	x = x + (i - 1) * WALL_SIZE;
 	
 	for (i = 0; i < STAGE_HEIGHT; i++)
 	{
-		Rectangle(hdc, x, y + i * r, x + r, y + i * r + r);
+		Rectangle(hdc, x, y + i * WALL_SIZE, x + WALL_SIZE, y + (i + 1) * WALL_SIZE);
 	}
 }
 
-void drawOneBall(int color, int x, int y, int r)
-{	
-	HBRUSH hbrush = CreateSolidBrush(RGB(0, 0, 0));
+void drawOneBall(int color,	float x, float y, int r)
+{
+	int tmpCol;
+	if (color == 1) tmpCol = RGB(255, 99, 99);
+	else if (color == 2) tmpCol = RGB(99, 255, 99);
+	else if (color == 3) tmpCol = RGB(99, 99, 255);
+	else if (color == 4) tmpCol = RGB(255, 255, 51);
+	
+	HBRUSH hbrush = CreateSolidBrush(tmpCol);
 	HGDIOBJ h_old_brush = SelectObject(hdc, hbrush);
 	
 	Ellipse(hdc, x, y, x + r, y + r);
@@ -273,50 +278,37 @@ void drawOneBall(int color, int x, int y, int r)
 
 void drawMap()
 {
-	int idx = 0, r = 30;
+	int idx = 0;
 	float g_fBallSpace = 0.87f;
 
 	// 공이 그려질 위치
-	float fDrawX = 1.0f, fDrawY = 1.0f;
+	float fDrawX = 0.0f, fDrawY = 0.0f;
 
-	// 반복
-	for (int y = 0; y < STAGE_HEIGHT; y++)
+	for (int i = 0; i < STAGE_HEIGHT; i++)
 	{
-		// 겹치는 수치만큼 이동
-		fDrawY = WALL_SIZE + BALL_SIZE * g_fBallSpace * y;
-
-		for (int x = 0; x < STAGE_WIDTH; x++)
+		fDrawY = WALL_SIZE + BALL_SIZE * g_fBallSpace * i;
+		for (int j = 0; j < STAGE_WIDTH; j++)
 		{
-			// 공이 없으면 continue
-			idx = stage_now[y][x];
+			idx = stage_now[i][j];
 			if (idx == 0) continue;
-
-			// 0 : 홀수줄, 1 : 짝수줄
-			if (y % 2)
-			{
-				// 1 : 짝수줄
-				// 공의 반만큼 오른쪽으로
-				fDrawX = (float)(WALL_SIZE + BALL_SIZE / 2.0f + BALL_SIZE * x);
-			}
-			else
-			{
-				// 0 : 짝수줄
-				fDrawX = (float)(WALL_SIZE + x * BALL_SIZE);
-			}
-
-			drawOneBall(idx, fDrawX, fDrawY, r);
+			
+			if (i % 2) fDrawX = (float)(WALL_SIZE + BALL_SIZE / 2.0f + BALL_SIZE * j);
+			else fDrawX = (float)(WALL_SIZE + j * BALL_SIZE);
+			drawOneBall(idx, fDrawX + 350, fDrawY + 50, BALL_SIZE);
 		}
 	}
+}
+
+void drawLauncher()
+{
+	drawOneBall(ball_now, 575, 550, BALL_SIZE);
+	RoundRect(hdc, 598, 550, 601, 500, 30, 30);
 }
 
 void inGame(int map_number)
 {
 	system("cls");
 	PlaySound(TEXT("Puzzle Bobble.wav"), NULL, SND_FILENAME|SND_ASYNC|SND_LOOP);
-	int x = 0, y = 0;
-
-	
-	int ch = 0;
 	
 	while(game_active)
 	{
@@ -325,6 +317,7 @@ void inGame(int map_number)
 		if (_kbhit()) if (_getch() == 32) break;
 		drawWall();
 		drawMap();
+		drawLauncher();
 		
 		endBuffer();
 	}
@@ -339,7 +332,7 @@ int main()
 	{
 		if (_kbhit())
 		{
-			if (getch() == 13) break;
+			if (_getch() == 13) break;
 		}
 		startScreen(0);
 		Sleep(500);

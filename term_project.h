@@ -1,11 +1,11 @@
 #pragma once
 
 #define STAGE_COUNT 3
-#define STAGE_WIDTH 10
+#define STAGE_WIDTH 8
 #define STAGE_HEIGHT 11
-#define WALL_SIZE 32
+#define WALL_SIZE 50
 #define BALL_COUNT 7
-#define BALL_SIZE 32
+#define BALL_SIZE 50
 
 #define LAUNCHER_WIDTH 32
 #define LAUNCHER_HEIGHT 44

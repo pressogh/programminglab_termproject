@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <mmsystem.h>
 #include "term_project.h"
+#include <math.h>
 
 #include <stdbool.h>
 
@@ -156,6 +157,15 @@ int stage_now[STAGE_HEIGHT][STAGE_WIDTH] = {
 };
 int ball_now = 1, ball_next = 2;
 
+
+typedef struct _Launcher
+{
+	int x;
+	int y;
+	float angle;
+	int size;
+}_Launcher;
+
 void init()
 {
 	system("mode con cols=150 lines=50");
@@ -213,6 +223,9 @@ void startBuffer()
 {
 	hwnd = GetForegroundWindow();
 	hdc = GetDC(hwnd);
+
+	SetGraphicsMode(hdc, GM_ADVANCED);
+	
 	GetClientRect(hwnd, &bufferRT);
 	MemDC = CreateCompatibleDC(hdc);
 	BackBit = CreateCompatibleBitmap(hdc, bufferRT.right, bufferRT.bottom);
@@ -299,25 +312,83 @@ void drawMap()
 	}
 }
 
-void drawLauncher()
-{
-	drawOneBall(ball_now, 575, 550, BALL_SIZE);
-	RoundRect(hdc, 598, 550, 601, 500, 30, 30);
+void drawLauncher(_Launcher L)
+{	
+	float r = L.angle * 3.141592f / 180.0f;
+	float c = cos(r), s = sin(r);
+
+	drawOneBall(ball_next, 500, 550, BALL_SIZE);
+
+
+	MoveToEx(hdc, L.x, L.y, NULL);
+	LineTo(hdc, L.x + L.size * c, L.y + L.size * s);
+	
+	drawOneBall(ball_now, 575, 550, BALL_SIZE);	
 }
 
-void inGame(int map_number)
+void selectNewBall()
+{
+	int arr[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			if (stage_now[i][j] != 0) arr[stage_now[i][j]]++;
+		}
+	}
+	
+	while(1)
+	{
+		int tmp = 1 + rand() % 7;
+		ball_next = tmp;
+		if (arr[tmp] != 0) break;
+	}
+}
+
+void inGame()
 {
 	system("cls");
 	PlaySound(TEXT("Puzzle Bobble.wav"), NULL, SND_FILENAME|SND_ASYNC|SND_LOOP);
+	
+	_Launcher L;
+	L.x = 600;
+	L.y = 575;
+	L.angle = -90.0f;
+	L.size = 50;
 	
 	while(game_active)
 	{
 		startBuffer();
 
-		if (_kbhit()) if (_getch() == 32) break;
+
 		drawWall();
 		drawMap();
-		drawLauncher();
+		drawLauncher(L);
+		
+		if (_kbhit())
+		{
+			int tmp;
+			tmp = _getch();
+			
+			if (tmp == 32) break;
+			else if (tmp == 224)
+			{
+				int ch = _getch();
+				if (ch == 75) L.angle -= 5;
+				else if (ch == 77) L.angle += 5;
+				
+				if (L.angle <= -185.0f) {
+					L.angle = -180.0f;
+					continue;
+				}
+				else if (L.angle >= 5.0f)
+				{
+					L.angle = 0.0f;
+					continue;
+				}
+				
+			}
+		}
 		
 		endBuffer();
 	}
@@ -342,7 +413,7 @@ int main()
 		system("cls");
 	}
 
-	inGame(1);
+	inGame();
 
 	return 0;
 }

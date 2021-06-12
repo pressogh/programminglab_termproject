@@ -10,6 +10,8 @@
 #define LAUNCHER_WIDTH 32
 #define LAUNCHER_HEIGHT 44
 
+#define PI 3.141592f
+
 enum
 {
 	BALL_STATE_EMPTY = 0,
@@ -17,3 +19,16 @@ enum
 	BALL_STATE_ING,
 	BALL_STATE_END
 };
+
+typedef struct _LaunchBall
+{
+	int ballCanFire;
+	int ballState;
+	int ballNow;
+	int ballNext;
+	float flyingBallx;
+	float flyingBally;
+	float flyingBallSpeed;
+	float flyingBallMoveX;
+	float flyingBallMoveY;
+}_LaunchBall;

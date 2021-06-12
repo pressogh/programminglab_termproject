@@ -93,6 +93,14 @@ void draw_box2(int x1, int y1, int x2, int y2, char* ch)
 	}
 }
 
+typedef struct _Launcher
+{
+	int x;
+	int y;
+	float angle;
+	int size;
+}_Launcher;
+
 //
 // 맵 관련
 //
@@ -103,9 +111,9 @@ int stage_saved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] =
 	{
 		1, 1, 2, 2, 3, 3, 4, 4,
 		1, 1, 2, 2, 3, 3, 4, 0,
-		3, 3, 4, 4, 1, 1, 2, 2,
-		3, 3, 4, 4, 1, 1, 2, 0,
-		1, 1, 6, 6, 5, 5, 4, 4,
+		3, 7, 4, 4, 1, 1, 2, 2,
+		3, 0, 4, 4, 1, 1, 2, 0,
+		1, 0, 6, 6, 5, 5, 4, 4,
 		1, 1, 6, 6, 5, 5, 4, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
@@ -141,9 +149,9 @@ int stage_saved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] =
 	}
 };
 
-int stage;
+int stage = 0;
 bool game_active = true;
-int stage_now[STAGE_HEIGHT][STAGE_WIDTH] = {
+int stageNow[STAGE_HEIGHT][STAGE_WIDTH] = {
 	{ 1, 1, 1, 0, 0, 0, 0, 0 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -155,16 +163,10 @@ int stage_now[STAGE_HEIGHT][STAGE_WIDTH] = {
 	{ 0, 0, 0, 0, 0, 1, 1, 1 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0 }
 };
-int ball_now = 1, ball_next = 2;
 
+_Launcher L;
+_LaunchBall LB = { 0, 0, 0, 0, 0.0f, 0.0f, 2.0f, 0.0f, 0.0f };
 
-typedef struct _Launcher
-{
-	int x;
-	int y;
-	float angle;
-	int size;
-}_Launcher;
 
 void init()
 {
@@ -176,7 +178,7 @@ void init()
 	{
 		for (int j = 0; j < STAGE_WIDTH; j++)
 		{
-			stage_now[i][j] = stage_saved[0][i][j];
+			stageNow[i][j] = stage_saved[0][i][j];
 		}
 	}
 }
@@ -260,7 +262,7 @@ void endBuffer()
 
 void drawWall()
 {
-	int x = 350, y = 50;
+	int x = 0, y = 0;
 	int i;
 	for (i = 0; i < STAGE_HEIGHT; i++)
 	{
@@ -280,93 +282,394 @@ void drawWall()
 	}
 }
 
-void drawOneBall(int color,	float x, float y, int r)
+void drawOneBall(int color,	float x, float y)
 {
-	int tmpCol;
-	if (color == 1) tmpCol = RGB(255, 99, 99);
-	else if (color == 2) tmpCol = RGB(99, 255, 99);
-	else if (color == 3) tmpCol = RGB(99, 99, 255);
-	else if (color == 4) tmpCol = RGB(255, 255, 51);
-	else if (color == 5) tmpCol = RGB(255, 99, 255);
-	else if (color == 6) tmpCol = RGB(99, 255, 255);
-	else if (color == 7) tmpCol = RGB(145, 145, 145);
+	int brushCol, penCol;
+	if (color == 1)
+	{
+		brushCol = RGB(255, 99, 99);
+		penCol = RGB(200, 51, 51);
+	}
+	else if (color == 2)
+	{
+		brushCol = RGB(99, 255, 99);
+		penCol = RGB(52, 193, 49);
+	}
+	else if (color == 3)
+	{
+		brushCol = RGB(99, 99, 255);
+		penCol = RGB(50, 50, 201);
+	}
+	else if (color == 4)
+	{
+		brushCol = RGB(255, 255, 51);
+		penCol = RGB(209, 164, 51);
+	}
+	else if (color == 5)
+	{
+		brushCol = RGB(255, 99, 255);
+		penCol = RGB(196, 49, 196);
+	}
+	else if (color == 6)
+	{
+		brushCol = RGB(99, 255, 255);
+		penCol = RGB(49, 201, 200);
+	}
+	else if (color == 7)
+	{
+		brushCol = RGB(145, 145, 145);
+		penCol = RGB(46, 46, 46);
+	}
 	
-	HBRUSH hbrush = CreateSolidBrush(tmpCol);
+	HBRUSH hbrush = CreateSolidBrush(brushCol);
 	HGDIOBJ h_old_brush = SelectObject(hdc, hbrush);
+
+	HPEN hpen = CreatePen(PS_SOLID, 3, penCol);
+	HPEN h_old_pen = (HPEN)SelectObject(hdc, hpen);
 	
-	Ellipse(hdc, x, y, x + r, y + r);
+	Ellipse(hdc, x, y, x + BALL_SIZE, y + BALL_SIZE);
 	
 	SelectObject(hdc, h_old_brush);
 	DeleteObject(hbrush);
+	SelectObject(hdc, h_old_pen);
+	DeleteObject(hpen);
 }
 
 void drawMap()
 {
 	int idx = 0;
-	float g_fBallSpace = 0.87f;
+	float ballSpace = 0.87f;
 
 	// 공이 그려질 위치
 	float fDrawX = 0.0f, fDrawY = 0.0f;
 
 	for (int i = 0; i < STAGE_HEIGHT; i++)
 	{
-		fDrawY = WALL_SIZE + BALL_SIZE * g_fBallSpace * i;
+		fDrawY = WALL_SIZE + BALL_SIZE * ballSpace * i;
 		for (int j = 0; j < STAGE_WIDTH; j++)
 		{
-			idx = stage_now[i][j];
+			idx = stageNow[i][j];
 			if (idx == 0) continue;
 			
 			if (i % 2) fDrawX = (float)(WALL_SIZE + BALL_SIZE / 2.0f + BALL_SIZE * j);
 			else fDrawX = (float)(WALL_SIZE + j * BALL_SIZE);
-			drawOneBall(idx, fDrawX + 350, fDrawY + 50, BALL_SIZE);
+			drawOneBall(idx, fDrawX, fDrawY);
 		}
 	}
 }
 
-void drawLauncher(_Launcher L)
+void drawBallInLauncher()
+{
+	float x = 225, y = 50 * STAGE_HEIGHT;
+
+	switch (LB.ballState)
+	{
+	case BALL_STATE_READY:
+	{
+		drawOneBall(LB.ballNow, x, y);
+	}
+	break;
+
+	case BALL_STATE_ING:
+	{
+
+		TextOut(hdc, 0, 0, "fjeoiwafjoewjfoa", strlen("fjeoiwafjoewjfoa"));
+		drawOneBall(LB.ballNow, LB.flyingBallx, LB.flyingBally);
+	}
+	break;
+	default: break;
+	}
+
+	drawOneBall(LB.ballNext, x - 100, y);
+}
+
+void drawLauncher()
 {	
-	float r = L.angle * 3.141592f / 180.0f;
+	float r = L.angle * PI / 180.0f;
 	float c = cos(r), s = sin(r);
-
-	// ball_next
-	drawOneBall(ball_next, 475, 550, BALL_SIZE);
-
 
 	MoveToEx(hdc, L.x, L.y, NULL);
 	LineTo(hdc, L.x + L.size * c, L.y + L.size * s);
 	
-	drawOneBall(ball_now, 575, 550, BALL_SIZE);	
+	drawBallInLauncher();
 }
 
 void selectNewBall()
 {
+	if (LB.ballNow == 0)
+	{
+		int arr[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		for (int i = 0; i < STAGE_HEIGHT; i++)
+		{
+			for (int j = 0; j < STAGE_WIDTH; j++)
+			{
+				if (stageNow[i][j] != 0) arr[stageNow[i][j]]++;
+			}
+		}
+
+		while (1)
+		{
+			int tmp = 1 + rand() % 7;
+			LB.ballNext = tmp;
+			if (arr[tmp] != 0) break;
+		}
+	}
+
+	LB.ballNow = LB.ballNext;
+	
 	int arr[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	for (int i = 0; i < STAGE_HEIGHT; i++)
 	{
 		for (int j = 0; j < STAGE_WIDTH; j++)
 		{
-			if (stage_now[i][j] != 0) arr[stage_now[i][j]]++;
+			if (stageNow[i][j] != 0) arr[stageNow[i][j]]++;
 		}
 	}
 	
 	while(1)
 	{
 		int tmp = 1 + rand() % 7;
-		ball_next = tmp;
+		LB.ballNext = tmp;
 		if (arr[tmp] != 0) break;
 	}
+
+	LB.ballState = BALL_STATE_READY;
+	LB.ballCanFire = true;
 }
+
+bool stageCheck[STAGE_HEIGHT][STAGE_WIDTH] = { false };
+void checkAirBall(int x, int y)
+{
+	int tmp = 0;
+
+	if (x < 0 || y < 0) return;
+	if (x >= STAGE_WIDTH || y >= STAGE_HEIGHT) return;
+	if (y % 2)
+	{
+		if (x >= STAGE_WIDTH - 1) return;
+	}
+
+	if (stageNow[y][x] == 0) return;
+	if (stageCheck[y][x]) return;
+	stageCheck[y][x] = true;
+
+	if (y != 0)
+	{
+		checkAirBall(x - 1, y);
+		checkAirBall(x + 1, y);
+	}
+
+	if (y % 2)
+	{
+		checkAirBall(x, y + 1);
+		checkAirBall(x + 1, y + 1);
+	}
+	else
+	{
+		checkAirBall(x - 1, y + 1);
+		checkAirBall(x, y + 1);
+	}
+}
+
+void airBallDrop()
+{
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			stageCheck[i][j] = false;
+		}
+	}
+
+	for (int i = 0; i < STAGE_WIDTH; i++)
+	{
+		checkAirBall(i, 0);
+	}
+
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			if (stageCheck[i][j]) continue;
+			stageNow[i][j] = 0;
+		}
+	}
+}
+
+bool ballFlyingCheck()
+{
+	float ballSpace = 0.86f;
+
+	int x = 0, y = 0;
+	float ballSize = BALL_SIZE, wallSize = WALL_SIZE;
+
+	float enc = ballSize * ballSpace;	// 공끼리 접하는 수치
+	float sx = 0.0f, sy = 0.0f;			// 보드에 있는 공의 중심 좌표
+	float dx = 0.0f, dy = 0.0f;			// 날라가는 공의 중심 좌표
+	float xx = 0.0f, yy = 0.0f, zz = 0.0f;
+
+	if (LB.flyingBally <= wallSize) return true;
+
+	for (y = 0; y < STAGE_HEIGHT; y++)
+	{
+		for (x = 0; x < STAGE_WIDTH; x++)
+		{
+			if (stageNow[y][x] == 0) continue;
+
+			if (y % 2) // 짝수 줄
+			{
+				sx = wallSize + (x * ballSize) + ballSize;
+			}
+			else // 홀수 줄
+			{
+				sx = wallSize + (x * ballSize) + ballSize * 0.5f;
+			}
+
+			sy = wallSize + (y * enc) + (ballSize * 0.5f);
+
+			dx = LB.flyingBallx + ballSize * 0.5f;
+			dy = LB.flyingBally + ballSize * 0.5f;
+
+			xx = dx - sx;
+			yy = dy - sy;
+			zz = enc;
+
+			if ((xx * xx + yy * yy) <= zz * zz)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+void ballFlying()
+{
+	float wallLeft = WALL_SIZE;
+	float wallRight = WALL_SIZE + BALL_SIZE * STAGE_WIDTH;
+
+	LB.flyingBallx += LB.flyingBallMoveX;
+	LB.flyingBally -= LB.flyingBallMoveY;
+
+	if (LB.flyingBallx < wallLeft)
+	{
+		LB.flyingBallx = wallLeft + (wallLeft - LB.flyingBallx);
+		
+		LB.flyingBallMoveX *= -1.0f;
+	}
+
+	if (LB.flyingBallx + BALL_SIZE > wallRight)
+	{
+		LB.flyingBallx = wallRight - (LB.flyingBallx + BALL_SIZE - wallRight);
+		LB.flyingBallx -= BALL_SIZE;
+
+		LB.flyingBallMoveX *= -1.0f;
+	}
+
+	if (ballFlyingCheck())
+	{
+		LB.ballState = BALL_STATE_END;
+	}
+}
+
+void insertBallInStage()
+{
+	float ballSize = BALL_SIZE, wallSize = WALL_SIZE;
+	float fx = 0.0f, fy = 0.0f;
+	int nx = 0, ny = 0;
+	
+}
+
+void workBall()
+{
+	switch(LB.ballState)
+	{
+		case BALL_STATE_ING:
+		{
+			ballFlying();
+		}
+		break;
+
+		case BALL_STATE_END:
+		{
+			//insertBallInStage();
+			//deleteBallNotInCeiling();
+			//findEndGame();
+			selectNewBall();
+		}
+		break;
+		
+		case BALL_STATE_EMPTY: break;
+		case BALL_STATE_READY: break;
+	}
+}
+
+void launchBall()
+{
+	if (LB.ballState != BALL_STATE_READY || !LB.ballCanFire) return;
+	LB.flyingBallx = 225;
+	LB.flyingBally = 50 * STAGE_HEIGHT;
+
+	DOUBLE r = L.angle * PI / 180.0f;
+	LB.flyingBallMoveX = LB.flyingBallSpeed * (float)cos(r);
+	LB.flyingBallMoveY = -1.0 * LB.flyingBallSpeed * (float)sin(r);
+
+	LB.ballState = BALL_STATE_ING;
+	LB.ballCanFire = false;
+}
+
+void workLauncher(int ch)
+{
+	if (ch == 75) L.angle -= 2;
+	else if (ch == 77) L.angle += 2;
+	else if (ch == 72)
+	{
+		launchBall();
+	}
+
+	// 발사대 각도 처리
+	if (L.angle <= -180.0f) {
+		L.angle = -178.0f;
+	}
+	else if (L.angle >= 0.0f)
+	{
+		L.angle = -2.0f;
+	}
+}
+
+void ballInEnd()
+{
+	for (int i = 0; i < STAGE_WIDTH; i++)
+	{
+		if (stageNow[10][i] != 0) game_active = false;
+	}
+
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			if (stageNow[i][j] != 0) return;
+		}
+	}
+
+	stage++;
+	// initGameData();
+}
+
+
 
 void inGame()
 {
 	system("cls");
 	PlaySound(TEXT("Puzzle Bobble.wav"), NULL, SND_FILENAME|SND_ASYNC|SND_LOOP);
 	
-	_Launcher L;
-	L.x = 600;
-	L.y = 575;
+	L.x = 250;
+	L.y = 50 * STAGE_HEIGHT + 25;
 	L.angle = -90.0f;
 	L.size = 50;
+	
+	selectNewBall();
 	
 	while(game_active)
 	{
@@ -374,35 +677,19 @@ void inGame()
 
 		drawWall();
 		drawMap();
-		drawLauncher(L);
-		
+		drawLauncher();
+
+		workBall();
 		if (_kbhit())
 		{
 			int tmp;
 			tmp = _getch();
 			
-			if (tmp == 32) break;
+			if (tmp == 32) game_active = false;
 			else if (tmp == 224)
 			{
 				int ch = _getch();
-				if (ch == 75) L.angle -= 5;
-				else if (ch == 77) L.angle += 5;
-				else if (ch == 72)
-				{
-					ball_now = ball_next;
-					selectNewBall();
-				}
-
-				// 발사대 각도 처리
-				if (L.angle <= -185.0f) {
-					L.angle = -180.0f;
-					continue;
-				}
-				else if (L.angle >= 5.0f)
-				{
-					L.angle = 0.0f;
-					continue;
-				}				
+				workLauncher(ch);
 			}
 		}
 		

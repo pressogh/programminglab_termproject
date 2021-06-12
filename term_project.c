@@ -98,7 +98,7 @@ void draw_box2(int x1, int y1, int x2, int y2, char* ch)
 //
 
 // 저장된 맵
-int stage_saved[STAGE_COUNT][STAGE_WIDTH][STAGE_HEIGHT] = 
+int stage_saved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] = 
 {
 	{
 		1, 1, 2, 2, 3, 3, 4, 4,
@@ -171,6 +171,14 @@ void init()
 	system("mode con cols=150 lines=50");
 	srand(time(NULL));
 	removeCursor();
+
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			stage_now[i][j] = stage_saved[0][i][j];
+		}
+	}
 }
 
 void startScreen(int n)
@@ -320,7 +328,8 @@ void drawLauncher(_Launcher L)
 	float r = L.angle * 3.141592f / 180.0f;
 	float c = cos(r), s = sin(r);
 
-	drawOneBall(ball_next, 500, 550, BALL_SIZE);
+	// ball_next
+	drawOneBall(ball_next, 475, 550, BALL_SIZE);
 
 
 	MoveToEx(hdc, L.x, L.y, NULL);
@@ -362,7 +371,6 @@ void inGame()
 	while(game_active)
 	{
 		startBuffer();
-
 
 		drawWall();
 		drawMap();

@@ -279,6 +279,9 @@ void drawOneBall(int color,	float x, float y, int r)
 	else if (color == 2) tmpCol = RGB(99, 255, 99);
 	else if (color == 3) tmpCol = RGB(99, 99, 255);
 	else if (color == 4) tmpCol = RGB(255, 255, 51);
+	else if (color == 5) tmpCol = RGB(255, 99, 255);
+	else if (color == 6) tmpCol = RGB(99, 255, 255);
+	else if (color == 7) tmpCol = RGB(145, 145, 145);
 	
 	HBRUSH hbrush = CreateSolidBrush(tmpCol);
 	HGDIOBJ h_old_brush = SelectObject(hdc, hbrush);
@@ -376,7 +379,13 @@ void inGame()
 				int ch = _getch();
 				if (ch == 75) L.angle -= 5;
 				else if (ch == 77) L.angle += 5;
-				
+				else if (ch == 72)
+				{
+					ball_now = ball_next;
+					selectNewBall();
+				}
+
+				// 발사대 각도 처리
 				if (L.angle <= -185.0f) {
 					L.angle = -180.0f;
 					continue;
@@ -385,8 +394,7 @@ void inGame()
 				{
 					L.angle = 0.0f;
 					continue;
-				}
-				
+				}				
 			}
 		}
 		

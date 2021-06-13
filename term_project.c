@@ -684,7 +684,7 @@ void insertBallInStage()
 	}
 
 	if (stageNow[ny][nx] == 0) stageNow[ny][nx] = LB.ballNow;
-	else stageNow[ny][nx - 1] = LB.ballNow;
+	else stageNow[ny][nx + 1] = LB.ballNow;
 
 	for (int i = 0; i < STAGE_HEIGHT; i++)
 	{
@@ -710,15 +710,6 @@ void initGameData()
 	LB.flyingBallMoveY = 0.0f;
 	LB.flyingBallSpeed = 2.0f;
 }
-
-
-void drawTemp() {
-	TCHAR str[1024];
-
-	wsprintf(str, TEXT("가나다라"));
-	TextOut(hdc, 0, 0, str, lstrlen(str));
-}
-
 
 void findEndGame()
 {
@@ -840,6 +831,9 @@ void inGame(int stage)
 	
 	selectNewBall();
 
+	clock_t start, end;
+
+	start = clock();
 	gameActive = true;
 	while(gameActive)
 	{
@@ -849,6 +843,19 @@ void inGame(int stage)
 		drawWall();
 		drawLauncher();
 		drawMap();
+
+		end = clock();
+
+		// 10초 경과 시 자동 발사
+		TCHAR str[1024];
+		wsprintf(str, TEXT("%d"), (int)( 10 - ((double)(end - start) / CLOCKS_PER_SEC)));
+		TextOut(hdc, 600, 400, str, lstrlen(str));
+		
+		if ((end - start) >= 9000)
+		{
+			workLauncher(72);
+			start = clock();
+		}
 		
 		if (_kbhit())
 		{
@@ -860,6 +867,7 @@ void inGame(int stage)
 			{
 				int ch = _getch();
 				workLauncher(ch);
+				if (ch == 72) start = clock();
 			}
 		}
 		

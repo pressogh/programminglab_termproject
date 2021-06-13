@@ -5,14 +5,77 @@
 #include <Windows.h> //윈도우즈와 관련된 것을 처리해주는 입출력 함수입니다.
 #include <ctype.h>
 #include <mmsystem.h>
-#include "term_project.h"
 #include <math.h>
-
 #include <stdbool.h>
 
 #pragma comment(lib, "winmm.lib")
 
-void gotoxy(int x, int y) //내가 원하는 위치로 커서 이동
+#define STAGE_COUNT 3
+#define STAGE_WIDTH 8
+#define STAGE_HEIGHT 11
+#define WALL_SIZE 50
+#define BALL_COUNT 7
+#define BALL_SIZE 50
+
+#define LAUNCHER_WIDTH 32
+#define LAUNCHER_HEIGHT 44
+
+#define PI 3.141592f
+
+enum
+{
+	EMPTY = 0,
+	READY,
+	FLYING,
+	END
+};
+
+typedef struct _Launcher
+{
+	int x;
+	int y;
+	float angle;
+	int size;
+}_Launcher;
+
+typedef struct _LaunchBall
+{
+	int ballCanFire;
+	int ballState;
+	int ballNow;
+	int ballNext;
+	float flyingBallx;
+	float flyingBally;
+	float flyingBallSpeed;
+	float flyingBallMoveX;
+	float flyingBallMoveY;
+}_LaunchBall;
+
+void init();				// 프로그램 초기화
+void startScreen(int n);	// 초기 화면
+void startBuffer();			// 더블 버퍼링 시작
+void endBuffer();			// 더블 버퍼링 종료
+void drawWall();			// 벽 그리기
+void drawOneBall();			// 공 하나 그리기
+void drawMap();				// 맵에 있는 공들 그리기
+void drawBallInLauncher();	// 발사대에 있는 공 그리기
+void drawLauncher();		// 발사대 그리기
+
+void workLauncher();		// 발사대 각도 수정
+void selectNewBall();		// 새로운 공 선택
+void launchBall();			// 공 발사
+
+
+void workBall();			// 공 상태에 따른 처리
+void ballFlying();			// 공 날라가는 동안 작업
+void insertBallInStage();	// 날라간 공 맵에 넣는 작업
+void deleteSameBall();		// 같은 색의 공이 3개 이상 있을 시 파괴
+void ballInEnd();			// 공이 발사대에 닿을 시 종료
+
+void checkAirBall();		// 공중에 떠있는 공 체크
+void airBallDrop();			// 공중에 떠있는 공 파괴
+
+void gotoxy(int x, int y)	//내가 원하는 위치로 커서 이동
 {
 	COORD pos; // Windows.h 에 정의
 	pos.X = x;
@@ -93,20 +156,7 @@ void draw_box2(int x1, int y1, int x2, int y2, char* ch)
 	}
 }
 
-typedef struct _Launcher
-{
-	int x;
-	int y;
-	float angle;
-	int size;
-}_Launcher;
-
-//
-// 맵 관련
-//
-
-// 저장된 맵
-int stage_saved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] = 
+int stageSaved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] = 
 {
 	{
 		1, 1, 2, 2, 3, 3, 4, 4,
@@ -149,8 +199,8 @@ int stage_saved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] =
 	}
 };
 
-int stage = 0;
-bool game_active = true;
+int stageNum = 0;
+bool gameActive = true;
 int stageNow[STAGE_HEIGHT][STAGE_WIDTH] = {
 	{ 1, 1, 1, 0, 0, 0, 0, 0 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -173,14 +223,6 @@ void init()
 	system("mode con cols=150 lines=50");
 	srand(time(NULL));
 	removeCursor();
-
-	for (int i = 0; i < STAGE_HEIGHT; i++)
-	{
-		for (int j = 0; j < STAGE_WIDTH; j++)
-		{
-			stageNow[i][j] = stage_saved[0][i][j];
-		}
-	}
 }
 
 void startScreen(int n)
@@ -363,13 +405,13 @@ void drawBallInLauncher()
 
 	switch (LB.ballState)
 	{
-	case BALL_STATE_READY:
+	case READY:
 	{
 		drawOneBall(LB.ballNow, x, y);
 	}
 	break;
 
-	case BALL_STATE_ING:
+	case FLYING:
 	{
 		drawOneBall(LB.ballNow, LB.flyingBallx, LB.flyingBally);
 	}
@@ -430,7 +472,7 @@ void selectNewBall()
 		if (arr[tmp] != 0) break;
 	}
 
-	LB.ballState = BALL_STATE_READY;
+	LB.ballState = READY;
 	LB.ballCanFire = true;
 }
 
@@ -564,7 +606,7 @@ void ballFlying()
 
 	if (ballFlyingCheck())
 	{
-		LB.ballState = BALL_STATE_END;
+		LB.ballState = END;
 		FILE* file;
 		file = fopen("log.txt", "w");
 
@@ -679,7 +721,7 @@ void findEndGame()
 {
 	for (int i = 0; i < STAGE_WIDTH; i++)
 	{
-		if (stageNow[STAGE_HEIGHT - 1][i] != 0) game_active = false;
+		if (stageNow[STAGE_HEIGHT - 1][i] != 0) gameActive = false;
 	}
 
 	for (int i = 0; i < STAGE_HEIGHT; i++)
@@ -690,7 +732,8 @@ void findEndGame()
 		}
 	}
 
-	stage++;
+	stageNum++;
+	gameActive = false;
 	// initGameData();
 }
 
@@ -698,13 +741,13 @@ void workBall()
 {
 	switch(LB.ballState)
 	{
-		case BALL_STATE_ING:
+		case FLYING:
 		{
 			ballFlying();
 		}
 		break;
 
-		case BALL_STATE_END:
+		case END:
 		{
 			insertBallInStage();
 			airBallDrop();
@@ -713,14 +756,14 @@ void workBall()
 		}
 		break;
 		
-		case BALL_STATE_EMPTY: break;
-		case BALL_STATE_READY: break;
+		case EMPTY: break;
+		case READY: break;
 	}
 }
 
 void launchBall()
 {
-	if (LB.ballState != BALL_STATE_READY || !LB.ballCanFire) return;
+	if (LB.ballState != READY || !LB.ballCanFire) return;
 	LB.flyingBallx = 225;
 	LB.flyingBally = 50 * STAGE_HEIGHT;
 
@@ -728,14 +771,14 @@ void launchBall()
 	LB.flyingBallMoveX = LB.flyingBallSpeed * (float)cos(r);
 	LB.flyingBallMoveY = -1.0 * LB.flyingBallSpeed * (float)sin(r);
 
-	LB.ballState = BALL_STATE_ING;
+	LB.ballState = FLYING;
 	LB.ballCanFire = false;
 }
 
 void workLauncher(int ch)
 {
-	if (ch == 75) L.angle -= 2;
-	else if (ch == 77) L.angle += 2;
+	if (ch == 75) L.angle -= 2.0f;
+	else if (ch == 77) L.angle += 2.0f;
 	else if (ch == 72)
 	{
 		launchBall();
@@ -751,7 +794,7 @@ void workLauncher(int ch)
 	}
 }
 
-void inGame()
+void inGame(int stage)
 {
 	system("cls");
 	PlaySound(TEXT("Puzzle Bobble.wav"), NULL, SND_FILENAME|SND_ASYNC|SND_LOOP);
@@ -760,10 +803,12 @@ void inGame()
 	L.y = 50 * STAGE_HEIGHT + 25;
 	L.angle = -90.0f;
 	L.size = 50;
+
+	memcpy(stageNow, stageSaved[stage], sizeof(stageSaved[stage]));
 	
 	selectNewBall();
 	
-	while(game_active)
+	while(gameActive)
 	{
 		startBuffer();
 
@@ -772,7 +817,7 @@ void inGame()
 			int tmp;
 			tmp = _getch();
 			
-			if (tmp == 32) game_active = false;
+			if (tmp == 32) gameActive = false;
 			else if (tmp == 224)
 			{
 				int ch = _getch();
@@ -809,7 +854,9 @@ int main()
 		system("cls");
 	}
 
-	inGame();
+	inGame(0);
+	inGame(1);
+	inGame(2);
 
 	return 0;
 }

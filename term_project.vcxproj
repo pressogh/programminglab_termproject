@@ -21,9 +21,6 @@
   <ItemGroup>
     <ClCompile Include="term_project.c" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="term_project.h" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

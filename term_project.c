@@ -1,4 +1,7 @@
-﻿#include <stdio.h>
+﻿// 2071396 이강혁
+// Puzzle Bobble
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <conio.h>
@@ -70,7 +73,7 @@ void workBall();			// 공 상태에 따른 처리
 void ballFlying();			// 공 날라가는 동안 작업
 void insertBallInStage();	// 날라간 공 맵에 넣는 작업
 void deleteSameBall();		// 같은 색의 공이 3개 이상 있을 시 파괴
-void ballInEnd();			// 공이 발사대에 닿을 시 종료
+void findEndGame();			// 공이 발사대에 닿을 시 종료
 
 void checkAirBall();		// 공중에 떠있는 공 체크
 void airBallDrop();			// 공중에 떠있는 공 파괴
@@ -186,12 +189,12 @@ int stageSaved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] =
 	},
 	{
 		1, 1, 2, 2, 3, 3, 4, 4,
-		1, 1, 2, 2, 3, 3, 4, 0,
-		3, 3, 4, 4, 1, 1, 2, 2,
-		3, 3, 4, 4, 1, 1, 2, 0,
-		1, 1, 6, 6, 5, 5, 4, 4,
-		1, 1, 6, 6, 5, 5, 4, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 5, 0,
+		2, 1, 1, 7, 7, 6, 6, 5,
+		2, 0, 0, 0, 0, 0, 0, 0,
+		3, 3, 4, 4, 5, 5, 6, 6,
+		0, 0, 0, 0, 0, 0, 7, 0,
+		0, 3, 3, 2, 2, 1, 1, 7,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
@@ -201,18 +204,7 @@ int stageSaved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] =
 
 int stageNum = 0;
 bool gameActive = true;
-int stageNow[STAGE_HEIGHT][STAGE_WIDTH] = {
-	{ 1, 1, 1, 0, 0, 0, 0, 0 },
-	{ 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ 0, 0, 2, 2, 3, 0, 0, 0 },
-	{ 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ 0, 0, 0, 0, 4, 2, 1, 0 },
-	{ 0, 0, 0, 0, 0, 1, 1, 1 },
-	{ 0, 0, 0, 0, 0, 0, 0, 0 }
-};
+int stageNow[STAGE_HEIGHT][STAGE_WIDTH];
 
 _Launcher L;
 _LaunchBall LB = { 0, 0, 0, 0, 0.0f, 0.0f, 2.0f, 0.0f, 0.0f };
@@ -607,18 +599,6 @@ void ballFlying()
 	if (ballFlyingCheck())
 	{
 		LB.ballState = END;
-		FILE* file;
-		file = fopen("log.txt", "w");
-
-		for (int i = 0; i < STAGE_HEIGHT; i++)
-		{
-			for (int j = 0; j < STAGE_WIDTH; j++)
-			{
-				fprintf(file, "%d ", stageNow[i][j]);
-			}
-			fprintf(file, "\n");
-		}
-		free(file);
 	}
 }
 
@@ -703,7 +683,8 @@ void insertBallInStage()
 		if (nx >= STAGE_WIDTH) nx = STAGE_WIDTH - 1;
 	}
 
-	stageNow[ny][nx] = LB.ballNow;
+	if (stageNow[ny][nx] == 0) stageNow[ny][nx] = LB.ballNow;
+	else stageNow[ny][nx - 1] = LB.ballNow;
 
 	for (int i = 0; i < STAGE_HEIGHT; i++)
 	{
@@ -717,14 +698,52 @@ void insertBallInStage()
 	deleteSameBall(nx, ny);
 }
 
+void initGameData()
+{
+	LB.ballNow = 0;
+	LB.ballNext = 0;
+	LB.ballCanFire = 0;
+	LB.ballState = 0;
+	LB.flyingBallx = 0.0f;
+	LB.flyingBally = 0.0f;
+	LB.flyingBallMoveX = 0.0f;
+	LB.flyingBallMoveY = 0.0f;
+	LB.flyingBallSpeed = 2.0f;
+}
+
+
+void drawTemp() {
+	TCHAR str[1024];
+
+	wsprintf(str, TEXT("가나다라"));
+	TextOut(hdc, 0, 0, str, lstrlen(str));
+}
+
+
 void findEndGame()
 {
 	for (int i = 0; i < STAGE_WIDTH; i++)
 	{
-		if (stageNow[STAGE_HEIGHT - 1][i] != 0) gameActive = false;
+		if (stageNow[STAGE_HEIGHT - 1][i] != 0)
+		{
+			gameActive = false;
+		}
 	}
 
+	FILE* file;
+	file = fopen("log.txt", "w");
+
 	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			fprintf(file, "%d ", stageNow[i][j]);
+		}
+		fprintf(file, "\n");
+	}
+	free(file);
+	
+	for (int i = 0; i < STAGE_HEIGHT - 1; i++)
 	{
 		for (int j = 0; j < STAGE_WIDTH; j++)
 		{
@@ -734,7 +753,8 @@ void findEndGame()
 
 	stageNum++;
 	gameActive = false;
-	// initGameData();
+	fprintf(file, "%d", gameActive);
+	initGameData();
 }
 
 void workBall()
@@ -751,8 +771,10 @@ void workBall()
 		{
 			insertBallInStage();
 			airBallDrop();
+				
 			findEndGame();
-			selectNewBall();
+
+			if (gameActive)	selectNewBall();
 		}
 		break;
 		
@@ -817,12 +839,16 @@ void inGame(int stage)
 	memcpy(stageNow, stageSaved[stage], sizeof(stageSaved[stage]));
 	
 	selectNewBall();
-	
+
+	gameActive = true;
 	while(gameActive)
 	{
 		startBuffer();
 
 		drawManual();
+		drawWall();
+		drawLauncher();
+		drawMap();
 		
 		if (_kbhit())
 		{
@@ -836,13 +862,8 @@ void inGame(int stage)
 				workLauncher(ch);
 			}
 		}
-
-		drawWall();
-		drawLauncher();
-		drawMap();
-
-		workBall();
 		
+		workBall();
 		endBuffer();
 	}
 

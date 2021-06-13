@@ -166,7 +166,7 @@ int stageNow[STAGE_HEIGHT][STAGE_WIDTH] = {
 
 _Launcher L;
 _LaunchBall LB = { 0, 0, 0, 0, 0.0f, 0.0f, 2.0f, 0.0f, 0.0f };
-
+float ballSpace = 0.87f;
 
 void init()
 {
@@ -338,7 +338,6 @@ void drawOneBall(int color,	float x, float y)
 void drawMap()
 {
 	int idx = 0;
-	float ballSpace = 0.87f;
 
 	// 공이 그려질 위치
 	float fDrawX = 0.0f, fDrawY = 0.0f;
@@ -372,8 +371,6 @@ void drawBallInLauncher()
 
 	case BALL_STATE_ING:
 	{
-
-		TextOut(hdc, 0, 0, "fjeoiwafjoewjfoa", strlen("fjeoiwafjoewjfoa"));
 		drawOneBall(LB.ballNow, LB.flyingBallx, LB.flyingBally);
 	}
 	break;
@@ -438,6 +435,7 @@ void selectNewBall()
 }
 
 bool stageCheck[STAGE_HEIGHT][STAGE_WIDTH] = { false };
+int stageByCheck[STAGE_HEIGHT][STAGE_WIDTH] = { 0 };
 void checkAirBall(int x, int y)
 {
 	int tmp = 0;
@@ -498,9 +496,6 @@ void airBallDrop()
 
 bool ballFlyingCheck()
 {
-	float ballSpace = 0.86f;
-
-	int x = 0, y = 0;
 	float ballSize = BALL_SIZE, wallSize = WALL_SIZE;
 
 	float enc = ballSize * ballSpace;	// 공끼리 접하는 수치
@@ -510,11 +505,11 @@ bool ballFlyingCheck()
 
 	if (LB.flyingBally <= wallSize) return true;
 
-	for (y = 0; y < STAGE_HEIGHT; y++)
+	for (int y = 0; y < STAGE_HEIGHT; y++)
 	{
-		for (x = 0; x < STAGE_WIDTH; x++)
+		for (int x = 0; x < STAGE_WIDTH; x++)
 		{
-			if (stageNow[y][x] == 0) continue;
+			if (!stageNow[y][x]) continue;
 
 			if (y % 2) // 짝수 줄
 			{
@@ -534,7 +529,7 @@ bool ballFlyingCheck()
 			yy = dy - sy;
 			zz = enc;
 
-			if ((xx * xx + yy * yy) <= zz * zz)
+			if (xx * xx + yy * yy <= zz * zz)
 			{
 				return true;
 			}
@@ -570,6 +565,73 @@ void ballFlying()
 	if (ballFlyingCheck())
 	{
 		LB.ballState = BALL_STATE_END;
+		FILE* file;
+		file = fopen("log.txt", "w");
+
+		for (int i = 0; i < STAGE_HEIGHT; i++)
+		{
+			for (int j = 0; j < STAGE_WIDTH; j++)
+			{
+				fprintf(file, "%d ", stageNow[i][j]);
+			}
+			fprintf(file, "\n");
+		}
+		free(file);
+	}
+}
+
+void deleteSameBall(int x, int y)
+{
+	int cnt = 0;
+	
+	if (x < 0 || y < 0) return;
+	if (x >= STAGE_WIDTH || y >= STAGE_HEIGHT) return;
+	if (y % 2)
+	{
+		if (x >= STAGE_WIDTH - 1) return;
+	}
+
+	if (stageCheck[y][x]) return;
+	if (stageByCheck[y][x] != LB.ballNow) return;
+	stageCheck[y][x] = true;
+	
+	if (y % 2)
+	{
+		deleteSameBall(x, y - 1);
+		deleteSameBall(x - 1, y);
+		deleteSameBall(x + 1, y);
+		deleteSameBall(x, y + 1);
+		deleteSameBall(x + 1, y - 1);
+		deleteSameBall(x + 1, y + 1);
+	}
+	else
+	{
+		deleteSameBall(x, y - 1);
+		deleteSameBall(x - 1, y);
+		deleteSameBall(x, y + 1);
+		deleteSameBall(x + 1, y);
+		deleteSameBall(x - 1, y - 1);
+		deleteSameBall(x - 1, y + 1);
+	}
+
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			if (stageCheck[i][j])
+			{
+				if (stageByCheck[i][j] == stageNow[i][j])
+				{
+					stageByCheck[i][j] = 0;
+					cnt++;
+				}
+			}
+		}
+	}
+
+	if (cnt > 2)
+	{
+		memcpy(stageNow, stageByCheck, sizeof(stageByCheck));
 	}
 }
 
@@ -578,7 +640,58 @@ void insertBallInStage()
 	float ballSize = BALL_SIZE, wallSize = WALL_SIZE;
 	float fx = 0.0f, fy = 0.0f;
 	int nx = 0, ny = 0;
-	
+
+	fx = LB.flyingBallx - wallSize + ballSize * 0.5f;
+	fy = LB.flyingBally - wallSize + ballSize * 0.5f;
+
+	ny = (int)(fy / (ballSize * ballSpace));
+	if (ny < 0) ny = 0;
+	if (ny >= STAGE_HEIGHT) ny = STAGE_HEIGHT - 1;
+
+	if (ny % 2)
+	{
+		nx = (int)((fx + ballSize * 0.5f) / ballSize);
+		if (nx < 0) nx = 0;
+		if (nx >= STAGE_WIDTH) nx = STAGE_WIDTH - 1;
+	}
+	else
+	{
+		nx = (int)(fx / ballSize);
+		if (nx < 0) nx = 0;
+		if (nx >= STAGE_WIDTH) nx = STAGE_WIDTH - 1;
+	}
+
+	stageNow[ny][nx] = LB.ballNow;
+
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			stageCheck[i][j] = false;
+			stageByCheck[i][j] = stageNow[i][j];
+		}
+	}
+
+	deleteSameBall(nx, ny);
+}
+
+void findEndGame()
+{
+	for (int i = 0; i < STAGE_WIDTH; i++)
+	{
+		if (stageNow[STAGE_HEIGHT - 1][i] != 0) game_active = false;
+	}
+
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			if (stageNow[i][j] != 0) return;
+		}
+	}
+
+	stage++;
+	// initGameData();
 }
 
 void workBall()
@@ -593,9 +706,9 @@ void workBall()
 
 		case BALL_STATE_END:
 		{
-			//insertBallInStage();
-			//deleteBallNotInCeiling();
-			//findEndGame();
+			insertBallInStage();
+			airBallDrop();
+			findEndGame();
 			selectNewBall();
 		}
 		break;
@@ -638,27 +751,6 @@ void workLauncher(int ch)
 	}
 }
 
-void ballInEnd()
-{
-	for (int i = 0; i < STAGE_WIDTH; i++)
-	{
-		if (stageNow[10][i] != 0) game_active = false;
-	}
-
-	for (int i = 0; i < STAGE_HEIGHT; i++)
-	{
-		for (int j = 0; j < STAGE_WIDTH; j++)
-		{
-			if (stageNow[i][j] != 0) return;
-		}
-	}
-
-	stage++;
-	// initGameData();
-}
-
-
-
 void inGame()
 {
 	system("cls");
@@ -675,11 +767,6 @@ void inGame()
 	{
 		startBuffer();
 
-		drawWall();
-		drawMap();
-		drawLauncher();
-
-		workBall();
 		if (_kbhit())
 		{
 			int tmp;
@@ -692,6 +779,12 @@ void inGame()
 				workLauncher(ch);
 			}
 		}
+
+		drawWall();
+		drawLauncher();
+		drawMap();
+
+		workBall();
 		
 		endBuffer();
 	}

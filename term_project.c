@@ -212,6 +212,8 @@ float ballSpace = 0.87f;
 bool stageCheck[STAGE_HEIGHT][STAGE_WIDTH] = { false };
 int stageByCheck[STAGE_HEIGHT][STAGE_WIDTH] = { 0 };
 
+int totalScore = 0, stageScore = 0;
+
 void init()
 {
 	system("mode con cols=150 lines=50");
@@ -524,6 +526,7 @@ void airBallDrop()
 		{
 			if (stageCheck[i][j]) continue;
 			stageNow[i][j] = 0;
+			
 		}
 	}
 }
@@ -654,6 +657,7 @@ void deleteSameBall(int x, int y)
 	if (cnt > 2)
 	{
 		memcpy(stageNow, stageByCheck, sizeof(stageByCheck));
+		stageScore += cnt * 10;
 	}
 }
 
@@ -709,6 +713,9 @@ void initGameData()
 	LB.flyingBallMoveX = 0.0f;
 	LB.flyingBallMoveY = 0.0f;
 	LB.flyingBallSpeed = 2.0f;
+
+	totalScore += stageScore;
+	stageScore = 0;
 }
 
 
@@ -805,6 +812,16 @@ void drawManual() {
 	TextOut(hdc, 600, 300, str, lstrlen(str));
 }
 
+void drawScore()
+{
+	TCHAR str[1024];
+	wsprintf(str, TEXT("스테이지 스코어 : %d"), stageScore);
+	TextOut(hdc, 600, 400, str, lstrlen(str));
+
+	wsprintf(str, TEXT("전체 스코어 : %d"), totalScore);
+	TextOut(hdc, 600, 450, str, lstrlen(str));
+}
+
 void printLog(int** arr)
 {
 	FILE* file;
@@ -845,6 +862,7 @@ void inGame(int stage)
 		startBuffer();
 
 		drawManual();
+		drawScore();
 		drawWall();
 		drawLauncher();
 		drawMap();
@@ -878,7 +896,6 @@ void inGame(int stage)
 		workBall();
 		endBuffer();
 	}
-
 }
 
 int main()

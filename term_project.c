@@ -54,30 +54,30 @@ typedef struct _LaunchBall
 	float flyingBallMoveY;
 }_LaunchBall;
 
-void init();			// 프로그램 초기화
+void init();				// 프로그램 초기화
 void startScreen(int n);	// 초기 화면
-void startBuffer();		// 더블 버퍼링 시작
-void endBuffer();		// 더블 버퍼링 종료
-void drawWall();		// 벽 그리기
-void drawOneBall();		// 공 하나 그리기
-void drawMap();		// 맵에 있는 공들 그리기
+void startBuffer();			// 더블 버퍼링 시작
+void endBuffer();			// 더블 버퍼링 종료
+void drawWall();			// 벽 그리기
+void drawOneBall();			// 공 하나 그리기
+void drawMap();				// 맵에 있는 공들 그리기
 void drawBallInLauncher();	// 발사대에 있는 공 그리기
-void drawLauncher();	// 발사대 그리기
-void drawManual();		// 조작 설명
-void drawScore();		// 점수 표시
+void drawLauncher();		// 발사대 그리기
+void drawManual();			// 조작 설명
+void drawScore();			// 점수 표시
 
 void workLauncher();		// 발사대 각도 수정
 void selectNewBall();		// 새로운 공 선택
-void launchBall();		// 공 발사
+void launchBall();			// 공 발사
 
-void workBall();		// 공 상태에 따른 처리
-void ballFlying();		// 공 날라가는 동안 작업
+void workBall();			// 공 상태에 따른 처리
+void ballFlying();			// 공 날라가는 동안 작업
 void insertBallInStage();	// 날라간 공 맵에 넣는 작업
-void deleteSameBall();	// 같은 색의 공이 3개 이상 있을 시 파괴
-void ballInEnd();		// 공이 발사대에 닿을 시 종료
+void deleteSameBall();		// 같은 색의 공이 3개 이상 있을 시 파괴
+void ballInEnd();			// 공이 발사대에 닿을 시 종료
 
 void checkAirBall();		// 공중에 떠있는 공 체크
-void airBallDrop();		// 공중에 떠있는 공 파괴
+void airBallDrop();			// 공중에 떠있는 공 파괴
 
 void printLog(int** arr);	// 배열을 파일로 출력
 

@@ -161,9 +161,9 @@ int stageSaved[STAGE_COUNT][STAGE_HEIGHT][STAGE_WIDTH] =
 	{
 		1, 1, 2, 2, 3, 3, 4, 4,
 		1, 1, 2, 2, 3, 3, 4, 0,
-		3, 7, 4, 4, 1, 1, 2, 2,
-		3, 0, 4, 4, 1, 1, 2, 0,
-		1, 0, 6, 6, 5, 5, 4, 4,
+		3, 3, 4, 4, 1, 1, 2, 2,
+		3, 3, 4, 4, 1, 1, 2, 0,
+		1, 1, 6, 6, 5, 5, 4, 4,
 		1, 1, 6, 6, 5, 5, 4, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
@@ -794,6 +794,16 @@ void workLauncher(int ch)
 	}
 }
 
+void drawManual() {
+	TCHAR str[1024];
+	
+	wsprintf(str, TEXT("←, → : 발사대 각도 조절"));
+	TextOut(hdc, 600, 250, str, lstrlen(str));
+
+	wsprintf(str, TEXT("↑ : 발사"));
+	TextOut(hdc, 600, 300, str, lstrlen(str));
+}
+
 void inGame(int stage)
 {
 	system("cls");
@@ -812,6 +822,8 @@ void inGame(int stage)
 	{
 		startBuffer();
 
+		drawManual();
+		
 		if (_kbhit())
 		{
 			int tmp;

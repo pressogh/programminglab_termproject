@@ -209,6 +209,8 @@ int stageNow[STAGE_HEIGHT][STAGE_WIDTH];
 _Launcher L;
 _LaunchBall LB = { 0, 0, 0, 0, 0.0f, 0.0f, 2.0f, 0.0f, 0.0f };
 float ballSpace = 0.87f;
+bool stageCheck[STAGE_HEIGHT][STAGE_WIDTH] = { false };
+int stageByCheck[STAGE_HEIGHT][STAGE_WIDTH] = { 0 };
 
 void init()
 {
@@ -374,19 +376,19 @@ void drawMap()
 	int idx = 0;
 
 	// 공이 그려질 위치
-	float fDrawX = 0.0f, fDrawY = 0.0f;
+	float fx = 0.0f, fy = 0.0f;
 
 	for (int i = 0; i < STAGE_HEIGHT; i++)
 	{
-		fDrawY = WALL_SIZE + BALL_SIZE * ballSpace * i;
+		fy = WALL_SIZE + BALL_SIZE * ballSpace * i;
 		for (int j = 0; j < STAGE_WIDTH; j++)
 		{
 			idx = stageNow[i][j];
 			if (idx == 0) continue;
 			
-			if (i % 2) fDrawX = (float)(WALL_SIZE + BALL_SIZE / 2.0f + BALL_SIZE * j);
-			else fDrawX = (float)(WALL_SIZE + j * BALL_SIZE);
-			drawOneBall(idx, fDrawX, fDrawY);
+			if (i % 2) fx = (float)(WALL_SIZE + BALL_SIZE / 2.0f + BALL_SIZE * j);
+			else fx = (float)(WALL_SIZE + j * BALL_SIZE);
+			drawOneBall(idx, fx, fy);
 		}
 	}
 }
@@ -468,8 +470,6 @@ void selectNewBall()
 	LB.ballCanFire = true;
 }
 
-bool stageCheck[STAGE_HEIGHT][STAGE_WIDTH] = { false };
-int stageByCheck[STAGE_HEIGHT][STAGE_WIDTH] = { 0 };
 void checkAirBall(int x, int y)
 {
 	int tmp = 0;
@@ -684,7 +684,7 @@ void insertBallInStage()
 	}
 
 	if (stageNow[ny][nx] == 0) stageNow[ny][nx] = LB.ballNow;
-	else stageNow[ny][nx + 1] = LB.ballNow;
+	else stageNow[ny][nx - 1] = LB.ballNow;
 
 	for (int i = 0; i < STAGE_HEIGHT; i++)
 	{
@@ -711,6 +711,7 @@ void initGameData()
 	LB.flyingBallSpeed = 2.0f;
 }
 
+
 void findEndGame()
 {
 	for (int i = 0; i < STAGE_WIDTH; i++)
@@ -720,19 +721,6 @@ void findEndGame()
 			gameActive = false;
 		}
 	}
-
-	FILE* file;
-	file = fopen("log.txt", "w");
-
-	for (int i = 0; i < STAGE_HEIGHT; i++)
-	{
-		for (int j = 0; j < STAGE_WIDTH; j++)
-		{
-			fprintf(file, "%d ", stageNow[i][j]);
-		}
-		fprintf(file, "\n");
-	}
-	free(file);
 	
 	for (int i = 0; i < STAGE_HEIGHT - 1; i++)
 	{
@@ -744,7 +732,7 @@ void findEndGame()
 
 	stageNum++;
 	gameActive = false;
-	fprintf(file, "%d", gameActive);
+	
 	initGameData();
 }
 
@@ -817,6 +805,22 @@ void drawManual() {
 	TextOut(hdc, 600, 300, str, lstrlen(str));
 }
 
+void printLog(int** arr)
+{
+	FILE* file;
+	file = fopen("log.txt", "w");
+
+	for (int i = 0; i < STAGE_HEIGHT; i++)
+	{
+		for (int j = 0; j < STAGE_WIDTH; j++)
+		{
+			fprintf(file, "%d ", arr[i][j]);
+		}
+		fprintf(file, "\n");
+	}
+	free(file);
+}
+
 void inGame(int stage)
 {
 	system("cls");
@@ -831,10 +835,11 @@ void inGame(int stage)
 	
 	selectNewBall();
 
-	clock_t start, end;
+	clock_t autoLaunchBallStart, autoLaunchBallEnd;
 
-	start = clock();
+	autoLaunchBallStart = clock();
 	gameActive = true;
+	
 	while(gameActive)
 	{
 		startBuffer();
@@ -844,17 +849,17 @@ void inGame(int stage)
 		drawLauncher();
 		drawMap();
 
-		end = clock();
+		autoLaunchBallEnd = clock();
 
 		// 10초 경과 시 자동 발사
 		TCHAR str[1024];
-		wsprintf(str, TEXT("%d"), (int)( 10 - ((double)(end - start) / CLOCKS_PER_SEC)));
-		TextOut(hdc, 600, 400, str, lstrlen(str));
+		wsprintf(str, TEXT("%d"), (int)( 10 - ((double)(autoLaunchBallEnd - autoLaunchBallStart) / CLOCKS_PER_SEC)));
+		TextOut(hdc, 300, BALL_SIZE * STAGE_HEIGHT + 15, str, lstrlen(str));
 		
-		if ((end - start) >= 9000)
+		if ((autoLaunchBallEnd - autoLaunchBallStart) >= 9000)
 		{
 			workLauncher(72);
-			start = clock();
+			autoLaunchBallStart = clock();
 		}
 		
 		if (_kbhit())
@@ -862,12 +867,11 @@ void inGame(int stage)
 			int tmp;
 			tmp = _getch();
 			
-			if (tmp == 32) gameActive = false;
-			else if (tmp == 224)
+			if (tmp == 224)
 			{
 				int ch = _getch();
 				workLauncher(ch);
-				if (ch == 72) start = clock();
+				if (ch == 72) autoLaunchBallStart = clock();
 			}
 		}
 		
@@ -895,9 +899,10 @@ int main()
 		system("cls");
 	}
 
-	inGame(0);
-	inGame(1);
-	inGame(2);
+	while(stageNum < 3)
+	{
+		inGame(stageNum);
+	}
 
 	return 0;
 }
